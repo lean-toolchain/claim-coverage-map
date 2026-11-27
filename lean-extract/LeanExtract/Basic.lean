@@ -99,6 +99,10 @@ def extractDecl (env : Environment) (isProject : Name → Bool) (root : System.F
     docstring := doc, type_pp := typePP, binders, conclusion_pp := concl,
     axioms := axStrs, uses_sorry := axs.contains ``sorryAx,
     nonstandard_axioms := nonstd.qsort (· < ·),
-    custom_constants := customConstants env isProject ci.type, source }
+    -- for definitions, also the constants their bodies use (so a judge can unfold them)
+    custom_constants := customConstants env isProject
+      (match ci with
+       | .defnInfo d => mkApp ci.type d.value
+       | _ => ci.type) |>.filter (· != ci.name.toString), source }
 
 end LeanExtract

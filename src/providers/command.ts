@@ -20,10 +20,11 @@ export class CommandProvider implements LlmProvider {
       withRateLimitRetry(async () => {
         const r = await execa(bin!, args, {
           input: `${req.system}\n\n${req.user}${schemaInstruction(req.schema)}${extra}`,
-          reject: false, cancelSignal: req.signal, timeout: 900_000,
+          reject: false, cancelSignal: req.signal, timeout: 1_800_000,
         });
         const all = `${r.stdout}\n${r.stderr}`;
         if (/rate limit|usage limit|quota/i.test(all) && r.exitCode !== 0) throw new ProviderError("rate_limit", all.slice(0, 300));
+        if (r.timedOut) throw new ProviderError("other", `${bin} did not answer within 30 minutes (timed out)`);
         if (r.exitCode !== 0) throw new ProviderError("other", `${bin} exited ${r.exitCode}: ${String(r.stderr).slice(0, 500)}`);
         return String(r.stdout);
       }, (e) => e instanceof ProviderError && e.kind === "rate_limit", 30_000),

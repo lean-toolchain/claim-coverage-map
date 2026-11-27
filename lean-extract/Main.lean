@@ -35,31 +35,44 @@ partial def projectModules (root : System.FilePath) : IO (Array Name) := do
         out := out.push (String.toName ((rel.dropRight 5).replace "/" "."))
   return out.qsort (·.toString < ·.toString)
 
-def main (argv : List String) : IO UInt32 := do
+unsafe def main (argv : List String) : IO UInt32 := do
   let args ← match parseArgs argv {} with
     | .ok a => pure a
     | .error e => IO.eprintln s!"lean-extract: {e}"; return (2 : UInt32)
+  enableInitializersExecution
   initSearchPath (← findSysroot)
   let mods ← if args.modules.isEmpty then projectModules args.root else pure args.modules
   if mods.isEmpty then IO.eprintln "lean-extract: no modules"; return (2 : UInt32)
   let topLevels := (mods.map fun m => m.getRoot).toList.eraseDups
   let isProject : Name → Bool := fun m => args.scope == "all" || topLevels.contains m.getRoot
-  let env ← try importModules (mods.map fun m => { module := m }) {} (trustLevel := 1024)
-    catch e => IO.eprintln s!"lean-extract: import failed: {e}"; return (4 : UInt32)
-  let ctx : Core.Context := { fileName := "<lean-extract>", fileMap := default, maxHeartbeats := 0 }
-  let st : Core.State := { env }
-  let action : MetaM (Array DeclOut) := do
-    let mut out := #[]
-    for (n, ci) in env.constants.toList do
-      if n.isInternalDetail || ci.isUnsafe then continue
-      let some idx := env.getModuleIdxFor? n | continue
-      if !isProject (env.header.moduleNames[idx.toNat]!) then continue
-      if !args.kinds.contains (kindOf env ci) then continue
-      if let some d ← (extractDecl env isProject args.root ci : MetaM _) then out := out.push d
-    return out.qsort fun a b =>
-      a.module < b.module || (a.module == b.module && (a.range.start.line < b.range.start.line ||
-        (a.range.start.line == b.range.start.line && a.name < b.name)))
-  let (decls, _) ← (action.run' {} {}).toIO ctx st
+  -- Extract from one environment.
+  let extractFrom (env : Environment) : IO (Array DeclOut) := do
+    let ctx : Core.Context := { fileName := "<lean-extract>", fileMap := default, maxHeartbeats := 0 }
+    let st : Core.State := { env }
+    let action : MetaM (Array DeclOut) := do
+      let mut out := #[]
+      for (n, ci) in env.constants.toList do
+        if n.isInternalDetail || ci.isUnsafe then continue
+        let some idx := env.getModuleIdxFor? n | continue
+        if !isProject (env.header.moduleNames[idx.toNat]!) then continue
+        if !args.kinds.contains (kindOf env ci) then continue
+        if let some d ← (extractDecl env isProject args.root ci : MetaM _) then out := out.push d
+      return out
+    let (ds, _) ← (action.run' {} {}).toIO ctx st
+    return ds
+  -- Import all modules together. If they clash (e.g. a comparator-style problem/solution pair
+  -- defining the same names), report the module list and exit 5: the caller then runs one
+  -- process per module (Lean initializers cannot run twice in one process) and merges.
+  let env ← try importModules (mods.map fun m => { module := m }) {} (trustLevel := 1024) (loadExts := true)
+    catch e =>
+      IO.eprintln s!"lean-extract: joint import failed: {e}"
+      IO.eprintln s!"CCM_MODULES: {",".intercalate (mods.toList.map toString)}"
+      return (5 : UInt32)
+  let mut byName : Std.HashMap String DeclOut := {}
+  for d in ← extractFrom env do byName := byName.insert d.name d
+  let decls := byName.toArray.map (·.2) |>.qsort fun a b =>
+    a.module < b.module || (a.module == b.module && (a.range.start.line < b.range.start.line ||
+      (a.range.start.line == b.range.start.line && a.name < b.name)))
   let toolchain := Lean.versionString
   let mathlib ← do
     let mf := args.root / "lake-manifest.json"

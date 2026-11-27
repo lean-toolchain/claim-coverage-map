@@ -95,11 +95,10 @@ alignment:
     - source: Lemma 3.4
       lean: Paper.choose_dvd
       module: Paper.Main
-      status: weakened
-      note: p odd assumed
+      status: "weakened (automatic, ccm): p odd assumed"
 ```
 
-`missing` results are not listed here (they appear in the report and appendix). The `status` value mapping is provisional until validated against the official schema (`PALOMAR_STATUS` in `src/stages/report.ts`).
+`missing` results are not listed here (they appear in the report and appendix). As in real v0.4 files, `status` is free text: ccm's verdict, who decided it, and the reason.
 
 ## Intermediate files
 

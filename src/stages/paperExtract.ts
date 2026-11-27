@@ -138,6 +138,7 @@ export async function paperExtract(opts: PaperExtractOptions): Promise<ClaimsFil
       location: { file: o.file, line: o.line, section: o.section },
       is_main: false,
       extraction: uncertain ? "uncertain" : "certain",
+      context_tex: o.contextBefore || null,
     });
   }
   void numberedOcc;
@@ -165,7 +166,8 @@ export async function paperExtract(opts: PaperExtractOptions): Promise<ClaimsFil
 export function matchesRef(c: Claim, ref: string): boolean {
   const r = ref.trim();
   if (r === c.id || (c.label && r === c.label)) return true;
-  const m = /^([A-Za-z]+)\.?\s*~?([0-9A-Z]+(?:\.[0-9]+)*[a-z]?)$/.exec(r);
+  // "Theorem 1.2", "Thm. 1.2", and descriptive forms like "Theorem 1.2: for subdiagrams ..." / "Theorem 1.2 (Main)"
+  const m = /^([A-Za-z]+)\.?\s*~?([0-9A-Z]+(?:\.[0-9]+)*[a-z]?)(?=$|[\s:,;(.—–-])/.exec(r);
   if (!m || !c.number) return false;
   return m[2] === c.number && normalizeKindWord(m[1]!) === c.kind;
 }

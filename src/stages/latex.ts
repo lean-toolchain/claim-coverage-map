@@ -186,7 +186,8 @@ export interface EnvOccurrence {
   section: string | null; // printed section number at this point, e.g. "3" or "A"
   sectionIndex: number; // 0 before first section
   estimatedNumber: string | null;
-  docIndex: number; // order of appearance among theorem-like environments
+  docIndex: number;
+  contextBefore: string; // up to ~1500 chars of body text preceding the environment // order of appearance among theorem-like environments
 }
 
 export interface ScanResult {
@@ -332,6 +333,7 @@ export function scan(lines: SrcLine[], decls: Map<string, EnvDecl>): ScanResult 
         sectionIndex: secNum + (appendix ? 1000 : 0),
         estimatedNumber,
         docIndex: docIndex++,
+        contextBefore: src.slice(Math.max(start, pos - 1500), pos).replace(/^[^\n]*\n/, "").trim(),
       });
     }
     // continue scanning *inside* the body as well (nested refs), so do not jump

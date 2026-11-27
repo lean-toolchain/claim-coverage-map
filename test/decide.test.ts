@@ -76,3 +76,12 @@ describe("vote aggregation", () => {
     expect(aggregate([d], [out("match"), { candidates: [] } as never])[0]!.relation).toBe("uncertain");
   });
 });
+
+describe("cross-claim pointers", () => {
+  it("does not call a claim missing while another claim's verdict points at it", () => {
+    const allVerdicts = new Map([["c-cor-2", [v("X", "matches_other_claim", { other_claim_id: "c-thm-1" })]]]);
+    expect(run([v("A", "unrelated")], { allVerdicts }).status).toBe("needs_review");
+    expect(run([], { allVerdicts }).status).toBe("needs_review");
+    expect(run([v("X", "match")], { allVerdicts }).status).toBe("verified");
+  });
+});

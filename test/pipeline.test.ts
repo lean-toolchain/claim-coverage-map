@@ -110,6 +110,7 @@ describe("pipeline with fixture judge", () => {
     expect(y.title).toBe("My paper");
     expect(y.status).toEqual({ build: "ok", sorry_count: 1, axioms: [] });
     expect(y.alignment.statements.map((s: { source: string }) => s.source)).toContain("Lemma 3.4");
+    expect(y.alignment.statements.find((s: { source: string }) => s.source === "Lemma 3.4").status).toBe("weakened (automatic, ccm): p odd assumed");
   });
 
   it("renders a single-file HTML report with embedded data and KaTeX", async () => {
@@ -118,5 +119,16 @@ describe("pipeline with fixture judge", () => {
     expect(html).toContain('id="ccm-data"');
     expect(html).toContain("data:font/woff2;base64,");
     expect(html).not.toMatch(/<script[^>]+src=/);
+  });
+});
+
+describe("second judging pass", () => {
+  it("feeds declarations pointed at a claim back into its candidates", async () => {
+    const { crossClaimPointers } = await import("../src/stages/judge.js");
+    const p = crossClaimPointers([
+      { claim_id: "a", error: null, candidates: [{ decl: "D1", relation: "matches_other_claim", other_claim_id: "b", differences: [], agreement: 2, rationale: "", assumed: false }] },
+      { claim_id: "c", error: null, candidates: [{ decl: "D2", relation: "matches_other_claim", other_claim_id: "b", differences: [], agreement: 2, rationale: "", assumed: false }] },
+    ]);
+    expect(p.get("b")).toEqual(["D1", "D2"]);
   });
 });

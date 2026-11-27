@@ -196,7 +196,7 @@ function failOn(cov: CoverageFile, spec?: string): number {
   return cov.claims.some((c) => want.includes(c.status)) ? 1 : 0;
 }
 
-const program = new Command("ccm").version(TOOL.version).description("Claim Coverage Map: how each paper theorem is covered in Lean");
+const program = new Command("ccm").enablePositionalOptions().version(TOOL.version).description("Claim Coverage Map: how each paper theorem is covered in Lean");
 const wd = () => new Option("--workdir <dir>", "work directory").default(".ccm-work");
 const llmOpts = (cmd: Command) =>
   cmd.option("--provider <id>").option("--model <id>").option("--votes <n>").option("--effort <level>").option("--offline", "no network; uncached judgments become needs_review");

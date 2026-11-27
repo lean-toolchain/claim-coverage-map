@@ -17,12 +17,13 @@ export class ClaudeCodeProvider implements LlmProvider {
       const run = async () => {
         const r = await execa(
           this.binary,
-          ["-p", "--output-format", "json", "--model", req.model, "--append-system-prompt", req.system],
-          { input: req.user + schemaInstruction(req.schema) + extra, reject: false, cancelSignal: req.signal, timeout: 900_000 },
+          ["-p", "--output-format", "json", "--tools", "", "--model", req.model, "--append-system-prompt", req.system],
+          { input: req.user + schemaInstruction(req.schema) + extra, reject: false, cancelSignal: req.signal, timeout: 1_800_000 },
         );
         const text = String(r.stdout);
         if (/usage limit|rate limit/i.test(text + r.stderr)) throw new ProviderError("rate_limit", "claude subscription limit reached");
-        if (r.exitCode !== 0) throw new ProviderError("other", `claude exited ${r.exitCode}: ${String(r.stderr).slice(0, 500)}`);
+        if (r.timedOut) throw new ProviderError("other", "claude did not answer within 30 minutes (timed out)");
+        if (r.exitCode !== 0) throw new ProviderError("other", `claude ${r.exitCode == null ? `was terminated (${r.signal ?? "unknown signal"})` : `exited ${r.exitCode}`}: ${String(r.stderr).slice(0, 500)}`);
         const env = JSON.parse(text) as { result?: string; is_error?: boolean; usage?: { input_tokens?: number; output_tokens?: number }; total_cost_usd?: number; modelUsage?: Record<string, unknown> };
         if (env.is_error) throw new ProviderError("other", String(env.result).slice(0, 500));
         if (env.usage) usage = { inputTokens: env.usage.input_tokens ?? 0, outputTokens: env.usage.output_tokens ?? 0, costUsd: env.total_cost_usd };

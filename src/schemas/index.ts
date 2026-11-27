@@ -16,6 +16,8 @@ export const Claim = z.object({
   location: z.object({ file: z.string(), line: z.number().int(), section: z.string().nullable() }),
   is_main: z.boolean(),
   extraction: z.enum(["certain", "uncertain"]),
+  /** Paper text just before the statement (standing assumptions, notation); given to the judge. */
+  context_tex: z.string().nullable().default(null),
 });
 export type Claim = z.infer<typeof Claim>;
 

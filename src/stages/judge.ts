@@ -20,7 +20,19 @@ export function candidatesToJudge(link: CandidatesFile["links"][number]): string
 
 export function buildContext(claimId: string, claims: ClaimsFile, cands: DeclInfo[], byName: Map<string, DeclInfo>): JudgeContext {
   const customConstants: Record<string, string> = {};
-  for (const n of [...new Set(cands.flatMap((c) => c.custom_constants))].sort()) {
+  // project constants used by the candidates, then the constants their definitions use (breadth-first, capped)
+  const seen = new Set<string>();
+  let frontier = [...new Set(cands.flatMap((c) => c.custom_constants))].sort();
+  for (let depth = 0; depth < 5 && frontier.length && seen.size < 40; depth++) {
+    const next: string[] = [];
+    for (const n of frontier) {
+      if (seen.has(n) || seen.size >= 40) continue;
+      seen.add(n);
+      next.push(...(byName.get(n)?.custom_constants ?? []));
+    }
+    frontier = [...new Set(next)].filter((n) => !seen.has(n)).sort();
+  }
+  for (const n of [...seen].sort()) {
     const d = byName.get(n);
     customConstants[n] = d?.source ? d.source.split("\n").slice(0, 80).join("\n") : d ? `${d.kind} ${d.name} : ${d.type_pp}` : "(definition unavailable)";
   }
@@ -42,9 +54,9 @@ async function pool<T, R>(items: T[], n: number, f: (t: T) => Promise<R>): Promi
 export async function judgeStage(opts: JudgeStageOptions): Promise<VerdictsFile> {
   const byName = new Map(opts.decls.decls.map((d) => [d.name, d]));
   const claimById = new Map(opts.claims.claims.map((c) => [c.id, c]));
-  const verdicts: Verdict[] = await pool(opts.candidates.links, opts.maxConcurrency ?? 4, async (link): Promise<Verdict> => {
+  const judgeOne = async (link: CandidatesFile["links"][number], extra: string[] = []): Promise<Verdict> => {
     const claim = claimById.get(link.claim_id)!;
-    const names = candidatesToJudge(link);
+    const names = [...new Set([...candidatesToJudge(link), ...extra])];
     const found = names.map((n) => byName.get(n)).filter((d): d is DeclInfo => !!d);
     const missingNames = names.filter((n) => !byName.has(n));
     const notFound = missingNames.map((n) => ({
@@ -63,7 +75,20 @@ export async function judgeStage(opts: JudgeStageOptions): Promise<VerdictsFile>
       }));
       return { claim_id: claim.id, candidates: [...mech, ...notFound], error: `${(e as Error).constructor.name}: ${(e as Error).message}` };
     }
+  };
+  const verdicts: Verdict[] = await pool(opts.candidates.links, opts.maxConcurrency ?? 4, (l) => judgeOne(l));
+
+  // Second pass: a declaration judged (unanimously) to match ANOTHER claim d is fed back as a
+  // candidate for d when search missed it — otherwise d could wrongly come out "missing".
+  const pointers = crossClaimPointers(verdicts);
+  const redo = opts.candidates.links.filter((l) => {
+    if (l.author_declared) return false;
+    const have = new Set(candidatesToJudge(l));
+    return (pointers.get(l.claim_id) ?? []).some((d) => !have.has(d));
   });
+  if (redo.length) opts.log?.(`re-judging ${redo.length} result(s) with candidates pointed to by other results`);
+  const again = await pool(redo, opts.maxConcurrency ?? 4, (l) => judgeOne(l, pointers.get(l.claim_id)));
+  for (const v of again) verdicts[verdicts.findIndex((x) => x.claim_id === v.claim_id)] = v;
   const usage = opts.judge instanceof LlmJudge && opts.judge.usage.known
     ? { inputTokens: opts.judge.usage.inputTokens, outputTokens: opts.judge.usage.outputTokens, costUsd: opts.judge.usage.costUsd }
     : null;
@@ -74,4 +99,16 @@ export async function judgeStage(opts: JudgeStageOptions): Promise<VerdictsFile>
     usage,
     verdicts,
   });
+}
+
+/** claim id → declarations that other claims' verdicts say correspond to it. */
+export function crossClaimPointers(verdicts: Verdict[]): Map<string, string[]> {
+  const m = new Map<string, string[]>();
+  for (const v of verdicts) for (const c of v.candidates) {
+    if (c.relation !== "matches_other_claim" || !c.other_claim_id || c.other_claim_id === v.claim_id) continue;
+    const list = m.get(c.other_claim_id) ?? [];
+    if (!list.includes(c.decl)) list.push(c.decl);
+    m.set(c.other_claim_id, list.sort());
+  }
+  return m;
 }

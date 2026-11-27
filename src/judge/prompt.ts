@@ -1,7 +1,7 @@
 import type { Claim, DeclInfo } from "../schemas/index.js";
 import { claimDisplay } from "../stages/paperExtract.js";
 
-export const PROMPT_VERSION = "j1";
+export const PROMPT_VERSION = "j2";
 
 export interface JudgeContext {
   otherClaims: { id: string; number: string | null; kind: Claim["kind"]; text_plain: string }[];
@@ -23,6 +23,10 @@ export function buildUserPrompt(claim: Claim, candidates: DeclInfo[], ctx: Judge
   const parts: string[] = [];
   parts.push(`## Paper statement: ${claimDisplay(claim)}${claim.title ? ` (${claim.title})` : ""} [id: ${claim.id}]`);
   parts.push(claim.text_tex);
+  if (claim.context_tex) {
+    parts.push(`\n## Paper text just before the statement (may contain standing assumptions or notation)`);
+    parts.push(claim.context_tex);
+  }
   parts.push(`\n## Other results of the paper (for "matches_other_claim")`);
   for (const o of ctx.otherClaims) parts.push(`- [${o.id}] ${claimDisplay(o)}: ${o.text_plain.slice(0, 400)}`);
   parts.push(`\n## Candidate Lean declarations`);

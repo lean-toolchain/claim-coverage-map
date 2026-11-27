@@ -6,6 +6,8 @@ export interface DecideInput {
   /** Verdicts for this claim (author-declared only when present). null → nothing judged yet. */
   verdicts: CandidateVerdict[];
   authorDeclaredEmpty: boolean;
+  /** The author declared the correspondence: pointers from other claims do not override it. */
+  authorDeclared?: boolean;
   judgeError: string | null;
   votes: number;
   /** Verdicts of every claim, for the corollary rule (row 5). */
@@ -45,11 +47,23 @@ export function decideAuto(i: Omit<DecideInput, "human">): Omit<Decision, "auto_
     const cor = findCorollary(i);
     if (cor) return { status: "corollary_only", decided_by: "auto", reason: `only formalized via ${cor.label}: ${cor.decl}`, corollary_of: cor.claimId };
   }
+  // Conservatism: never call a claim missing while another claim's verdict points a declaration at it.
+  const pointedAt = [...i.allVerdicts].flatMap(([cid, vs]) => cid === i.claim.id ? [] : vs.filter((v) => v.relation === "matches_other_claim" && v.other_claim_id === i.claim.id).map((v) => v.decl));
+  if (!i.authorDeclared && pointedAt.length && !V.some((v) => pointedAt.includes(v.decl))) {
+    return { status: "needs_review", decided_by: "auto", reason: `other results' judgments point ${[...new Set(pointedAt)].join(", ")} at this result, but it was not judged here`, corollary_of: null };
+  }
   if (V.length === 0) return { status: "missing", decided_by: "auto", reason: "no candidate Lean declaration", corollary_of: null };
   if (!anyUncertain && V.every((v) => v.relation === "unrelated")) {
     return { status: "missing", decided_by: "auto", reason: "all candidates rejected as unrelated", corollary_of: null };
   }
-  return { status: "needs_review", decided_by: "auto", reason: anyUncertain ? "judges were not unanimous or uncertain" : "no rule applied", corollary_of: null };
+  const others = [...new Set(V.filter((v) => v.relation === "matches_other_claim" && v.other_claim_id).map((v) => v.other_claim_id!))];
+  const uncertainDecls = V.filter((v) => !full(v)).map((v) => v.decl);
+  const reason = anyUncertain
+    ? `judges were not unanimous or not confident about ${uncertainDecls.join(", ")}`
+    : others.length
+      ? `candidates correspond to other results (${others.join(", ")}), none to this one; not formalized directly?`
+      : "no rule applied";
+  return { status: "needs_review", decided_by: "auto", reason, corollary_of: null };
 }
 
 function findCorollary(i: Omit<DecideInput, "human">): { claimId: string; decl: string; label: string } | null {

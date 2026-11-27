@@ -57,14 +57,51 @@ export async function leanExtract(o: LeanExtractOptions): Promise<DeclsFile> {
   };
   let r = await run(["update"]);
   if (r.exitCode !== 0) throw new CcmError(`lake update failed:\n${r.all}`, 4);
+  // Mathlib projects: fetch prebuilt .olean files instead of compiling Mathlib (target and workspace)
+  const usesMathlib = (dir: string) => existsSync(join(dir, "lake-manifest.json")) && /"name":\s*"mathlib"/.test(readFileSync(join(dir, "lake-manifest.json"), "utf8"));
+  if (usesMathlib(o.repoDir)) {
+    o.log?.("fetching Mathlib build cache");
+    await execa("lake", ["exe", "cache", "get"], { cwd: o.repoDir, reject: false });
+    await execa("lake", ["exe", "cache", "get"], { cwd: ws, reject: false });
+  }
   // build the target's default targets, then the extractor
+  o.log?.("building the Lean repository (lake build)");
   r = await execa("lake", ["build"], { cwd: o.repoDir, reject: false, all: true });
   if (r.exitCode !== 0) throw new CcmError(`target build failed:\n${r.all}`, 4);
   r = await run(["build", "lean-extract"]);
   if (r.exitCode !== 0) throw new CcmError(`lean-extract does not build on this toolchain (exit 3 semantics):\n${r.all}`, 3);
-  const args = ["exe", "lean-extract", "--package", pkg, "--root", resolve(o.repoDir), "--repo", o.repoUrl, "--commit", o.commit, "--out", resolve(o.out)];
+  // all kinds: theorems are link candidates; definitions give the judge the meaning of custom constants
+  const args = ["exe", "lean-extract", "--package", pkg, "--kinds", "theorem,def,axiom,opaque,inductive,structure,instance", "--root", resolve(o.repoDir), "--repo", o.repoUrl, "--commit", o.commit, "--out", resolve(o.out)];
   if (o.modules?.length) args.push("--modules", o.modules.join(","));
   r = await run(args);
+  if (r.exitCode === 5) {
+    // modules cannot be imported together: extract each in its own process and merge
+    const mods = /CCM_MODULES: (.*)/.exec(String(r.all))?.[1]?.split(",").filter(Boolean) ?? [];
+    o.log?.(`modules clash when imported together; extracting ${mods.length} modules separately`);
+    const parts: DeclsFile[] = [];
+    for (const m of mods) {
+      const part = `${o.out}.${m}.json`;
+      const base = args.filter((_, i) => args[i - 1] !== "--out" && args[i] !== "--out" && args[i - 1] !== "--modules" && args[i] !== "--modules");
+      const pr = await run([...base, "--modules", m, "--out", resolve(part)]);
+      if (pr.exitCode !== 0) throw new CcmError(`lean-extract failed for module ${m} (exit ${pr.exitCode}):\n${pr.all}`, 4);
+      parts.push(DeclsFile.parse(JSON.parse(readFileSync(part, "utf8"))));
+    }
+    const merged = mergeDecls(parts);
+    writeFileSync(o.out, JSON.stringify(merged, null, 2) + "\n");
+    return merged;
+  }
   if (r.exitCode !== 0) throw new CcmError(`lean-extract failed (exit ${r.exitCode}):\n${r.all}`, r.exitCode === 3 ? 3 : 4);
   return DeclsFile.parse(JSON.parse(readFileSync(o.out, "utf8")));
+}
+
+/** Merge per-module extractions; for duplicate names prefer the declaration that does not use sorry. */
+export function mergeDecls(parts: DeclsFile[]): DeclsFile {
+  const by = new Map<string, DeclsFile["decls"][number]>();
+  for (const p of parts) for (const d of p.decls) {
+    const old = by.get(d.name);
+    if (!old || (old.uses_sorry && !d.uses_sorry)) by.set(d.name, d);
+  }
+  const decls = [...by.values()].sort((a, b) =>
+    a.module.localeCompare(b.module) || a.range.start.line - b.range.start.line || a.name.localeCompare(b.name));
+  return { ...parts[0]!, decls };
 }

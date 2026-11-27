@@ -70,3 +70,14 @@ describe.skipIf(!hasLatexmk)("paper-extract (real LaTeX compile)", () => {
     expect(r.claims.every((c) => c.extraction === "certain")).toBe(true);
   }, 120_000);
 });
+
+describe("result references", () => {
+  it("accepts descriptive forms used in formalization.yaml", async () => {
+    const { matchesRef } = await import("../src/stages/paperExtract.js");
+    const c = { id: "c-thm-1.2", kind: "theorem", number: "1.2", label: "thm:x" } as never;
+    expect(matchesRef(c, "Theorem 1.2: for subdiagrams $D$")).toBe(true);
+    expect(matchesRef(c, "Thm. 1.2 (main)")).toBe(true);
+    expect(matchesRef(c, "Theorem 1.21")).toBe(false);
+    expect(matchesRef(c, "Lemma 1.2")).toBe(false);
+  });
+});

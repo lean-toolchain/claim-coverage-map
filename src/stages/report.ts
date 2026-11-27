@@ -50,7 +50,7 @@ export function buildCoverage(o: ReportOptions): CoverageFile {
     const stale = !!j && !!j.claim_text_sha256 && j.claim_text_sha256 !== textSha;
     const noVerdictYet = !v && !authorDeclaredEmpty && (link ? (link.author_declared ?? link.retrieved.map((r) => r.decl)).length > 0 : false);
     const d = decide({
-      claim: c, claims: claimsInOrder, verdicts: V, authorDeclaredEmpty,
+      claim: c, claims: claimsInOrder, verdicts: V, authorDeclaredEmpty, authorDeclared: !!link?.author_declared,
       judgeError: v?.error ?? (noVerdictYet ? "not judged" : null),
       votes, allVerdicts, human: j && !stale ? j : null, noAutoVerified: !!o.noAutoVerified,
     });
@@ -144,10 +144,12 @@ export function toMarkdown(cov: CoverageFile): string {
   return lines.join("\n") + "\n";
 }
 
-/** Provisional mapping; to be fixed against the official formalization.schema.json (interfaces.md). */
-export const PALOMAR_STATUS: Record<Exclude<Status, "missing">, string> = {
-  verified: "formalized", weakened: "weakened", corollary_only: "partial", assumed: "assumed", needs_review: "unreviewed",
-};
+/** formalization.yaml v0.4 uses free-text `status`; ccm writes its verdict and the reason. */
+export function palomarStatus(c: CoverageClaim): string {
+  const by = c.decided_by === "human" ? "confirmed by reviewer" : c.decided_by === "rule" ? "mechanical check" : "automatic, ccm";
+  const n = note(c);
+  return `${STATUS_LABEL[c.status]} (${by})${n ? `: ${n}` : ""}`;
+}
 
 export function toFormalizationYaml(cov: CoverageFile, decls: DeclsFile, existing?: string): string {
   const byName = new Map(decls.decls.map((d) => [d.name, d]));
@@ -158,7 +160,7 @@ export function toFormalizationYaml(cov: CoverageFile, decls: DeclsFile, existin
     .filter((c) => c.status !== "missing")
     .flatMap((c) => c.decls.map((n) => ({
       source: claimDisplay(c), lean: n, module: byName.get(n)?.module ?? "",
-      status: PALOMAR_STATUS[c.status as Exclude<Status, "missing">], note: note(c),
+      status: palomarStatus(c),
     })));
   const doc = existing ? YAML.parseDocument(existing) : new YAML.Document({});
   doc.setIn(["status", "sorry_count"], sorryCount);
