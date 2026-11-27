@@ -136,6 +136,17 @@ function doLink(c: Ctx, o: { hints?: string }) {
 async function doJudge(c: Ctx, o: { provider?: string; model?: string; votes?: string; effort?: string; offline?: boolean }) {
   const projLlm = loadProjectConfig(c.meta().repoDir)?.llm;
   const s = loadLlmSettings(process.cwd(), { provider: o.provider, model: o.model, votes: o.votes ? Number(o.votes) : undefined, effort: o.effort }, projLlm);
+  if (!s.provider && o.offline) {
+    c.log("offline and no LLM provider configured: every result that needs a judgment becomes 'needs review'");
+    const v = await judgeStage({
+      claims: readJson(c.p("claims.json"), ClaimsFile), decls: readJson(c.p("decls.json"), DeclsFile),
+      candidates: readJson(c.p("candidates.json"), CandidatesFile),
+      judge: { name: "none", judge: async () => { throw new Error("offline, no LLM provider configured"); } },
+      judgeInfo: null, log: () => {},
+    });
+    writeJson(c.p("verdicts.json"), v);
+    return;
+  }
   if (!s.provider) {
     throw new CcmError(
       "no LLM provider configured. Pass --provider <claude-code|anthropic-api|openai-compatible|command> --model <id>,\n" +

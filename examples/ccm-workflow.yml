@@ -16,7 +16,7 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: lean-toolchain/claim-coverage-map@v0
         with:
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
