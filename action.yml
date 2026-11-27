@@ -147,7 +147,7 @@ runs:
         esac
         if [ -z "$ANTHROPIC_API_KEY$OPENAI_API_KEY" ] && [ "$IN_PROVIDER" != "command" ]; then
           echo "::warning::No LLM API key available (e.g. a PR from a fork). Judging uses cached answers only; uncached results become 'needs review'."
-          args+=(--offline)
+          args+=(--llm-offline)
           echo "offline=true" >> "$GITHUB_OUTPUT"
         fi
         set +e

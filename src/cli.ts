@@ -210,7 +210,7 @@ async function doRun(o: RunOpts) {
   await doPaperExtract(c, { ...o, allowEstimatedNumbering: o.allowEstimatedNumbering || o.compile === false });
   await doLeanExtract(c, { decls: o.decls, modules: o.modules ?? loadProjectConfig(c.meta().repoDir)?.modules?.join(",") });
   doLink(c, { hints: o.hints, authorLinks: o.authorLinks });
-  await doJudge(c, o);
+  await doJudge(c, { ...o, offline: o.offline || o.llmOffline });
   const cov = doReport(c, { noAutoVerified: o.autoVerified === false });
   process.exitCode = failOn(cov, o.failOn);
 }
@@ -220,6 +220,7 @@ const runOptions = (cmd: Command) => llmOpts(
     .addOption(wd()).option("--hints <hints.yaml>").option("--decls <decls.json>", "use a pre-extracted lean-extract output")
     .option("--modules <M1,M2>").option("--allow-estimated-numbering").option("--no-compile", "skip LaTeX compilation (estimated numbering)")
     .option("--no-auto-verified", "never emit automatic 'verified'").option("--fail-on <statuses>")
+    .option("--llm-offline", "no LLM calls (cached answers only), but still download sources")
     .option("--no-author-links", "blind mode: ignore author declarations (hints, blueprint, formalization.yaml, docstrings)"),
 );
 
