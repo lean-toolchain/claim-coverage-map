@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "ccm/verdicts@1"
+    },
+    "tool": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ]
+    },
+    "judge": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "provider": {
+              "type": "string"
+            },
+            "model": {
+              "type": "string"
+            },
+            "votes": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "prompt_version": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "provider",
+            "model",
+            "votes",
+            "prompt_version"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "usage": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "inputTokens": {
+              "type": "number"
+            },
+            "outputTokens": {
+              "type": "number"
+            },
+            "costUsd": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "inputTokens",
+            "outputTokens",
+            "costUsd"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "verdicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim_id": {
+            "type": "string"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "decl": {
+                  "type": "string"
+                },
+                "relation": {
+                  "type": "string",
+                  "enum": [
+                    "match",
+                    "weaker",
+                    "matches_other_claim",
+                    "unrelated",
+                    "uncertain"
+                  ]
+                },
+                "other_claim_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "differences": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "added_hypothesis",
+                          "narrowed_domain",
+                          "weakened_constant",
+                          "weakened_conclusion",
+                          "other"
+                        ]
+                      },
+                      "lean": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "paper": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "note": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "lean",
+                      "paper",
+                      "note"
+                    ]
+                  }
+                },
+                "rationale": {
+                  "type": "string"
+                },
+                "agreement": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "assumed": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "decl",
+                "relation",
+                "other_claim_id",
+                "differences",
+                "rationale",
+                "agreement",
+                "assumed"
+              ]
+            }
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "claim_id",
+          "candidates",
+          "error"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "tool",
+    "judge",
+    "usage",
+    "verdicts"
+  ]
+}

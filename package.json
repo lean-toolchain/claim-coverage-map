@@ -1,0 +1,36 @@
+{
+  "name": "ccm",
+  "version": "0.1.0",
+  "description": "Claim Coverage Map: map every paper theorem to its Lean formalization status",
+  "type": "module",
+  "bin": {
+    "ccm": "dist/cli.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsup src/cli.ts --format esm --target node24 --clean",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "schemas": "tsx scripts/genSchemas.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.14.0",
+    "commander": "^15.1.0",
+    "execa": "^10.2.1",
+    "katex": "^0.19.1",
+    "smol-toml": "^1.9.1",
+    "tar": "^7.5.24",
+    "yaml": "^2.9.1",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@types/katex": "^0.16.8",
+    "@types/node": "^26.6.11",
+    "tsup": "^9.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.2"
+  }
+}

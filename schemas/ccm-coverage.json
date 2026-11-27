@@ -1,0 +1,458 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "ccm/coverage@1"
+    },
+    "tool": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ]
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "paper": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
+        },
+        "toolchain": {
+          "type": "string"
+        },
+        "judge": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "type": "string"
+                },
+                "model": {
+                  "type": "string"
+                },
+                "votes": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "prompt_version": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "provider",
+                "model",
+                "votes",
+                "prompt_version"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "paper",
+        "repo",
+        "commit",
+        "toolchain",
+        "judge"
+      ]
+    },
+    "usage": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "inputTokens": {
+              "type": "number"
+            },
+            "outputTokens": {
+              "type": "number"
+            },
+            "costUsd": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "inputTokens",
+            "outputTokens",
+            "costUsd"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "number"
+        },
+        "verified": {
+          "type": "number"
+        },
+        "weakened": {
+          "type": "number"
+        },
+        "corollary_only": {
+          "type": "number"
+        },
+        "assumed": {
+          "type": "number"
+        },
+        "missing": {
+          "type": "number"
+        },
+        "needs_review": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "total",
+        "verified",
+        "weakened",
+        "corollary_only",
+        "assumed",
+        "missing",
+        "needs_review"
+      ]
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim_id": {
+            "type": "string"
+          },
+          "number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "theorem",
+              "lemma",
+              "proposition",
+              "corollary"
+            ]
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_main": {
+            "type": "boolean"
+          },
+          "extraction": {
+            "type": "string",
+            "enum": [
+              "certain",
+              "uncertain"
+            ]
+          },
+          "text_tex": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "weakened",
+              "corollary_only",
+              "assumed",
+              "missing",
+              "needs_review"
+            ]
+          },
+          "auto_status": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "weakened",
+              "corollary_only",
+              "assumed",
+              "missing",
+              "needs_review"
+            ]
+          },
+          "decided_by": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "human",
+              "rule"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "decls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidence": {
+            "type": "object",
+            "properties": {
+              "paper": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string"
+                  },
+                  "line": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "file",
+                  "line"
+                ]
+              },
+              "lean": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "decl": {
+                      "type": "string"
+                    },
+                    "file": {
+                      "type": "string"
+                    },
+                    "line": {
+                      "type": "number"
+                    },
+                    "url": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "type_pp": {
+                      "type": "string"
+                    },
+                    "module": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "decl",
+                    "file",
+                    "line",
+                    "url",
+                    "type_pp",
+                    "module"
+                  ]
+                }
+              },
+              "differences": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "added_hypothesis",
+                        "narrowed_domain",
+                        "weakened_constant",
+                        "weakened_conclusion",
+                        "other"
+                      ]
+                    },
+                    "lean": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "paper": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "note": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "lean",
+                    "paper",
+                    "note"
+                  ]
+                }
+              },
+              "rejected_candidates": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "decl": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "decl",
+                    "reason"
+                  ]
+                }
+              },
+              "axioms": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "uses_sorry": {
+                "type": "boolean"
+              },
+              "corollary_of": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "paper",
+              "lean",
+              "differences",
+              "rejected_candidates",
+              "axioms",
+              "uses_sorry",
+              "corollary_of"
+            ]
+          },
+          "human": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "verified",
+                          "weakened",
+                          "corollary_only",
+                          "assumed",
+                          "missing",
+                          "needs_review"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "const": "confirm"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "note": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "by": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "at": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "stale": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "status",
+              "note",
+              "by",
+              "at",
+              "stale"
+            ]
+          },
+          "claim_text_sha256": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "claim_id",
+          "number",
+          "kind",
+          "title",
+          "is_main",
+          "extraction",
+          "text_tex",
+          "status",
+          "auto_status",
+          "decided_by",
+          "reason",
+          "decls",
+          "evidence",
+          "human",
+          "claim_text_sha256"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "tool",
+    "generated_at",
+    "inputs",
+    "usage",
+    "summary",
+    "claims"
+  ]
+}

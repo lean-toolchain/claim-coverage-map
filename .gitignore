@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.ccm-work/
+.ccm/
+lean-extract/.lake/
+test/fixtures/lean-repo/.lake/
+*.log
+.DS_Store
+.env

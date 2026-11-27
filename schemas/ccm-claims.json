@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "ccm/claims@1"
+    },
+    "tool": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ]
+    },
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "paper": {
+          "type": "string"
+        },
+        "source_sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "paper",
+        "source_sha256"
+      ]
+    },
+    "numbering": {
+      "type": "string",
+      "enum": [
+        "aux",
+        "estimated"
+      ]
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "theorem",
+              "lemma",
+              "proposition",
+              "corollary"
+            ]
+          },
+          "number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text_tex": {
+            "type": "string"
+          },
+          "text_plain": {
+            "type": "string"
+          },
+          "location": {
+            "type": "object",
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "line": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "section": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "file",
+              "line",
+              "section"
+            ]
+          },
+          "is_main": {
+            "type": "boolean"
+          },
+          "extraction": {
+            "type": "string",
+            "enum": [
+              "certain",
+              "uncertain"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "number",
+          "label",
+          "title",
+          "text_tex",
+          "text_plain",
+          "location",
+          "is_main",
+          "extraction"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "tool",
+    "inputs",
+    "numbering",
+    "claims"
+  ]
+}

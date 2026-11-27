@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "propertyNames": {
+    "type": "string"
+  },
+  "additionalProperties": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "verified",
+              "weakened",
+              "corollary_only",
+              "assumed",
+              "missing",
+              "needs_review"
+            ]
+          },
+          {
+            "type": "string",
+            "const": "confirm"
+          }
+        ]
+      },
+      "note": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "by": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "at": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "claim_text_sha256": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "status"
+    ]
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "ccm/candidates@1"
+    },
+    "tool": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ]
+    },
+    "ignored": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim_id": {
+            "type": "string"
+          },
+          "author_declared": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "author_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "hints",
+                  "blueprint",
+                  "formalization-yaml",
+                  "docstring"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "retrieved": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "decl": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "decl",
+                "score"
+              ]
+            }
+          }
+        },
+        "required": [
+          "claim_id",
+          "author_declared",
+          "author_source",
+          "retrieved"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "tool",
+    "links"
+  ]
+}

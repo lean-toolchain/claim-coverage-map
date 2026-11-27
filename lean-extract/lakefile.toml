@@ -1,0 +1,11 @@
+name = "lean_extract"
+version = "0.1.0"
+defaultTargets = ["lean-extract"]
+
+[[lean_lib]]
+name = "LeanExtract"
+
+[[lean_exe]]
+name = "lean-extract"
+root = "Main"
+supportInterpreter = true

@@ -1,0 +1,23 @@
+# Copy to .github/workflows/ccm.yml in your Lean repository.
+name: Claim coverage
+on:
+  push:
+    branches: [main]          # keeps a baseline for PR comparisons
+  pull_request:
+  release:
+    types: [published]
+
+permissions:
+  contents: write             # release uploads
+  pull-requests: write        # PR comments
+  actions: read               # baseline artifact download
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lean-toolchain/claim-coverage-map@v0
+        with:
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          fail-on: assumed               # optional

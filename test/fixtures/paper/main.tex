@@ -1,0 +1,38 @@
+\documentclass{amsart}
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem*{theorem*}{Theorem}
+\begin{document}
+\begin{abstract}
+We prove Theorem~\ref{thm:main}. % a comment with \ref{thm:fake}
+\end{abstract}
+\section{Introduction}
+\begin{theorem}[Main theorem]\label{thm:intro}
+For every $n > 2$ there are no positive integers $a,b,c$ with $a^n + b^n = c^n$.
+\end{theorem}
+\begin{theorem*}
+An unnumbered restatement.
+\end{theorem*}
+\input{sections/prelim}
+\section{Main results}
+\begin{definition}\label{def:nice}
+A group is nice if it is abelian.
+\end{definition}
+\begin{theorem}\label{thm:main}
+Every finite group $G$ of odd order is solvable.
+\end{theorem}
+\begin{corollary}\label{cor:simple}
+Every finite simple group of odd order is cyclic of prime order.
+\end{corollary}
+\begin{lemma}
+If $p$ is prime then $p \mid \binom{p}{k}$ for $0<k<p$.
+\end{lemma}
+\begin{proposition}\label{prop:sorry}
+The sum of two even numbers is even.
+\end{proposition}
+\end{document}

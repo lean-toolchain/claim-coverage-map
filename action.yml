@@ -1,0 +1,222 @@
+name: Claim Coverage Map
+description: Map every theorem of a paper to its status in the Lean formalization; comment coverage changes on PRs and attach reports to releases.
+branding: { icon: check-square, color: blue }
+
+inputs:
+  paper:
+    description: arXiv ID or LaTeX directory. Default comes from ccm.yaml / formalization.yaml / paper/
+    required: false
+  provider:
+    description: LLM provider (anthropic-api | openai-compatible | command). Default comes from ccm.yaml
+    required: false
+  model:
+    description: Model ID passed to the provider. Default comes from ccm.yaml
+    required: false
+  anthropic-api-key:
+    description: API key for provider anthropic-api. When empty (e.g. PRs from forks), judging runs offline from cache
+    required: false
+  openai-api-key:
+    description: API key for provider openai-compatible (exposed as OPENAI_API_KEY)
+    required: false
+  votes:
+    description: Independent judgments per theorem (1-3)
+    required: false
+  fail-on:
+    description: Fail the job if any result has one of these statuses, e.g. "missing,assumed"
+    required: false
+  latex:
+    description: "How to compile LaTeX for exact theorem numbers: apt | docker | none (estimate numbers)"
+    default: apt
+  comment:
+    description: Post / update a coverage comment on pull requests
+    default: "true"
+  release-assets:
+    description: On release events, attach report.html, coverage.json, appendix tables and formalization.yaml
+    default: "true"
+  no-auto-verified:
+    description: Never emit an automatic "verified"
+    default: "false"
+  github-token:
+    description: Token for comments, artifacts and release uploads
+    default: ${{ github.token }}
+
+outputs:
+  summary:
+    description: One-line coverage summary
+    value: ${{ steps.run.outputs.summary }}
+  report:
+    description: Path to report.html
+    value: ${{ steps.run.outputs.report }}
+  exit-code:
+    description: ccm exit code (1 means a fail-on status occurred)
+    value: ${{ steps.run.outputs.exit-code }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with: { node-version: 24 }
+
+    - name: Install ccm
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        npm install -g pnpm@9 >/dev/null
+        pnpm install --frozen-lockfile
+        pnpm build
+
+    - name: Install Lean (elan)
+      shell: bash
+      run: |
+        if ! command -v elan >/dev/null; then
+          curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+        fi
+
+    - name: Install LaTeX
+      if: inputs.latex == 'apt'
+      shell: bash
+      run: |
+        if ! command -v latexmk >/dev/null; then
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends latexmk texlive-latex-extra texlive-science texlive-fonts-recommended >/dev/null
+        fi
+
+    - name: Restore caches (Lean build, LLM answers)
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.elan
+          .lake
+          .ccm-work/.cache/llm
+          .ccm-work/lean-ws/.lake
+        key: ccm-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ github.sha }}
+        restore-keys: |
+          ccm-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
+          ccm-${{ runner.os }}-
+
+    - name: Fetch Mathlib cache
+      shell: bash
+      run: |
+        if [ -f lake-manifest.json ] && grep -q '"name": "mathlib"' lake-manifest.json; then
+          lake exe cache get || true
+        fi
+
+    - name: Run ccm
+      id: run
+      shell: bash
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+        CCM: ${{ github.action_path }}/dist/cli.js
+        IN_PAPER: ${{ inputs.paper }}
+        IN_PROVIDER: ${{ inputs.provider }}
+        IN_MODEL: ${{ inputs.model }}
+        IN_VOTES: ${{ inputs.votes }}
+        IN_FAIL_ON: ${{ inputs.fail-on }}
+        IN_LATEX: ${{ inputs.latex }}
+        IN_NO_AUTO: ${{ inputs.no-auto-verified }}
+      run: |
+        args=()
+        [ -n "$IN_PAPER" ] && args+=("$IN_PAPER")
+        # CI has no subscription CLI: with a key and no explicit provider, use the matching API provider
+        if [ -z "$IN_PROVIDER" ] && [ -n "$ANTHROPIC_API_KEY" ]; then IN_PROVIDER=anthropic-api; fi
+        if [ -z "$IN_PROVIDER" ] && [ -n "$OPENAI_API_KEY" ]; then IN_PROVIDER=openai-compatible; fi
+        [ -n "$IN_PROVIDER" ] && args+=(--provider "$IN_PROVIDER")
+        [ -n "$IN_MODEL" ] && args+=(--model "$IN_MODEL")
+        [ -n "$IN_VOTES" ] && args+=(--votes "$IN_VOTES")
+        [ -n "$IN_FAIL_ON" ] && args+=(--fail-on "$IN_FAIL_ON")
+        [ "$IN_NO_AUTO" = "true" ] && args+=(--no-auto-verified)
+        case "$IN_LATEX" in
+          none) args+=(--no-compile) ;;
+          *) args+=(--allow-estimated-numbering) ;;
+        esac
+        if [ -z "$ANTHROPIC_API_KEY$OPENAI_API_KEY" ] && [ "$IN_PROVIDER" != "command" ]; then
+          echo "::warning::No LLM API key available (e.g. a PR from a fork). Judging uses cached answers only; uncached results become 'needs review'."
+          args+=(--offline)
+          echo "offline=true" >> "$GITHUB_OUTPUT"
+        fi
+        set +e
+        node "$CCM" "${args[@]}"
+        code=$?
+        set -e
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        if [ ! -f .ccm-work/out/coverage.json ]; then exit "$code"; fi
+        echo "report=$PWD/.ccm-work/out/report.html" >> "$GITHUB_OUTPUT"
+        echo "summary=$(node -e 'const s=require("./.ccm-work/out/coverage.json").summary;console.log(`${s.total} results: verified ${s.verified} · weakened ${s.weakened} · corollary only ${s.corollary_only} · assumed ${s.assumed} · missing ${s.missing} · needs review ${s.needs_review}`)')" >> "$GITHUB_OUTPUT"
+
+    - name: Find baseline coverage (base branch)
+      if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
+      shell: bash
+      continue-on-error: true
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        BASE: ${{ github.base_ref }}
+        WORKFLOW: ${{ github.workflow }}
+      run: |
+        id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$WORKFLOW" --branch "$BASE" --status success --limit 1 --json databaseId -q '.[0].databaseId')
+        if [ -n "$id" ]; then
+          gh run download "$id" --repo "$GITHUB_REPOSITORY" -n ccm-coverage -D .ccm-work/base
+        fi
+
+    - name: Write coverage comment / summary
+      if: always() && steps.run.outputs.report != ''
+      shell: bash
+      env:
+        CCM: ${{ github.action_path }}/dist/cli.js
+        OFFLINE: ${{ steps.run.outputs.offline }}
+      run: |
+        if [ -f .ccm-work/base/coverage.json ]; then
+          node "$CCM" diff .ccm-work/base/coverage.json .ccm-work/out/coverage.json --out .ccm-work/out/comment.md
+        else
+          node "$CCM" diff - .ccm-work/out/coverage.json --out .ccm-work/out/comment.md
+        fi
+        if [ "$OFFLINE" = "true" ]; then
+          printf '\n> ⚠️ No LLM key was available for this run, so uncached results are marked *needs review*.\n' >> .ccm-work/out/comment.md
+        fi
+        cat .ccm-work/out/comment.md >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Upload coverage artifact
+      if: always() && steps.run.outputs.report != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: ccm-coverage
+        path: |
+          .ccm-work/out/coverage.json
+          .ccm-work/out/report.html
+          .ccm-work/out/appendix.md
+          .ccm-work/out/appendix.tex
+          .ccm-work/out/formalization.yaml
+        overwrite: true
+
+    - name: Comment on pull request
+      if: always() && inputs.comment == 'true' && steps.run.outputs.report != '' && github.event.pull_request.number
+      shell: bash
+      continue-on-error: true
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR: ${{ github.event.pull_request.number }}
+      run: |
+        marker='<!-- ccm-coverage -->'
+        cid=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate -q ".[] | select(.body | startswith(\"$marker\")) | .id" | tail -1)
+        if [ -n "$cid" ]; then
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$cid" -F body=@.ccm-work/out/comment.md >/dev/null
+        else
+          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F body=@.ccm-work/out/comment.md >/dev/null
+        fi
+
+    - name: Attach reports to release
+      if: always() && inputs.release-assets == 'true' && github.event_name == 'release' && steps.run.outputs.report != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        TAG: ${{ github.event.release.tag_name }}
+      run: |
+        cd .ccm-work/out
+        gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
+          report.html coverage.json appendix.tex appendix.md formalization.yaml
+
+    - name: Apply fail-on result
+      if: steps.run.outputs.exit-code != '' && steps.run.outputs.exit-code != '0'
+      shell: bash
+      run: exit ${{ steps.run.outputs.exit-code }}

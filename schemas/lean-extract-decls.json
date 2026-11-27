@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "lean-extract/decls@1"
+    },
+    "tool": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ]
+    },
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "toolchain": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
+        },
+        "mathlib": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "commit": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "commit"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "toolchain",
+        "repo",
+        "commit",
+        "mathlib"
+      ]
+    },
+    "decls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "theorem",
+              "def",
+              "axiom",
+              "opaque",
+              "inductive",
+              "structure",
+              "instance"
+            ]
+          },
+          "module": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "range": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "object",
+                "properties": {
+                  "line": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "col": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "line",
+                  "col"
+                ]
+              },
+              "end": {
+                "type": "object",
+                "properties": {
+                  "line": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "col": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "line",
+                  "col"
+                ]
+              }
+            },
+            "required": [
+              "start",
+              "end"
+            ]
+          },
+          "docstring": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type_pp": {
+            "type": "string"
+          },
+          "binders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "type_pp": {
+                  "type": "string"
+                },
+                "info": {
+                  "type": "string"
+                },
+                "is_prop": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "name",
+                "type_pp",
+                "info",
+                "is_prop"
+              ]
+            }
+          },
+          "conclusion_pp": {
+            "type": "string"
+          },
+          "axioms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "uses_sorry": {
+            "type": "boolean"
+          },
+          "nonstandard_axioms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "custom_constants": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "module",
+          "file",
+          "range",
+          "docstring",
+          "type_pp",
+          "binders",
+          "conclusion_pp",
+          "axioms",
+          "uses_sorry",
+          "nonstandard_axioms",
+          "custom_constants"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "tool",
+    "inputs",
+    "decls"
+  ]
+}

@@ -1,0 +1,228 @@
+{
+  "schema": "lean-extract/decls@1",
+  "tool": {
+    "name": "lean-extract",
+    "version": "0.1.0"
+  },
+  "inputs": {
+    "toolchain": "leanprover/lean4:v4.24.0",
+    "repo": "https://github.com/example/paper-lean",
+    "commit": "abc123",
+    "mathlib": null
+  },
+  "decls": [
+    {
+      "name": "Paper.fermat",
+      "kind": "theorem",
+      "module": "Paper.Intro",
+      "file": "Paper/Intro.lean",
+      "range": {
+        "start": {
+          "line": 10,
+          "col": 0
+        },
+        "end": {
+          "line": 15,
+          "col": 0
+        }
+      },
+      "docstring": "Theorem 1.1 (Fermat)",
+      "type_pp": "∀ (n : ℕ), 2 < n → ∀ (a b c : ℕ), 0 < a → 0 < b → 0 < c → a ^ n + b ^ n ≠ c ^ n",
+      "binders": [
+        {
+          "name": "n",
+          "type_pp": "ℕ",
+          "info": "default",
+          "is_prop": false
+        },
+        {
+          "name": "h",
+          "type_pp": "2 < n",
+          "info": "default",
+          "is_prop": true
+        }
+      ],
+      "conclusion_pp": "∀ (a b c : ℕ), 0 < a → 0 < b → 0 < c → a ^ n + b ^ n ≠ c ^ n",
+      "axioms": [
+        "Classical.choice",
+        "Quot.sound",
+        "propext"
+      ],
+      "uses_sorry": false,
+      "nonstandard_axioms": [],
+      "custom_constants": [],
+      "source": null
+    },
+    {
+      "name": "Paper.odd_order_cyclic",
+      "kind": "theorem",
+      "module": "Paper.Main",
+      "file": "Paper/Main.lean",
+      "range": {
+        "start": {
+          "line": 20,
+          "col": 0
+        },
+        "end": {
+          "line": 25,
+          "col": 0
+        }
+      },
+      "docstring": "the simple case",
+      "type_pp": "∀ (G : Type) [inst : Group G] [Fintype G], Odd (Fintype.card G) → IsSimpleGroup G → IsCyclic G",
+      "binders": [
+        {
+          "name": "G",
+          "type_pp": "Type",
+          "info": "default",
+          "is_prop": false
+        }
+      ],
+      "conclusion_pp": "IsCyclic G",
+      "axioms": [
+        "Classical.choice",
+        "Quot.sound",
+        "propext"
+      ],
+      "uses_sorry": false,
+      "nonstandard_axioms": [],
+      "custom_constants": [],
+      "source": null
+    },
+    {
+      "name": "Paper.add_zero",
+      "kind": "theorem",
+      "module": "Paper.Prelim",
+      "file": "Paper/Prelim.lean",
+      "range": {
+        "start": {
+          "line": 5,
+          "col": 0
+        },
+        "end": {
+          "line": 10,
+          "col": 0
+        }
+      },
+      "docstring": "Lemma 2.1",
+      "type_pp": "∀ (n : ℕ), n + 0 = n",
+      "binders": [
+        {
+          "name": "n",
+          "type_pp": "ℕ",
+          "info": "default",
+          "is_prop": false
+        }
+      ],
+      "conclusion_pp": "n + 0 = n",
+      "axioms": [],
+      "uses_sorry": false,
+      "nonstandard_axioms": [],
+      "custom_constants": [],
+      "source": null
+    },
+    {
+      "name": "Paper.choose_dvd",
+      "kind": "theorem",
+      "module": "Paper.Main",
+      "file": "Paper/Main.lean",
+      "range": {
+        "start": {
+          "line": 40,
+          "col": 0
+        },
+        "end": {
+          "line": 45,
+          "col": 0
+        }
+      },
+      "docstring": "Lemma 3.4",
+      "type_pp": "∀ (p k : ℕ), Nat.Prime p → 0 < k → k < p → Odd p → p ∣ Nat.choose p k",
+      "binders": [
+        {
+          "name": "p",
+          "type_pp": "ℕ",
+          "info": "default",
+          "is_prop": false
+        },
+        {
+          "name": "hp",
+          "type_pp": "Nat.Prime p",
+          "info": "default",
+          "is_prop": true
+        },
+        {
+          "name": "h₃",
+          "type_pp": "Odd p",
+          "info": "default",
+          "is_prop": true
+        }
+      ],
+      "conclusion_pp": "p ∣ Nat.choose p k",
+      "axioms": [
+        "Classical.choice",
+        "Quot.sound",
+        "propext"
+      ],
+      "uses_sorry": false,
+      "nonstandard_axioms": [],
+      "custom_constants": [],
+      "source": null
+    },
+    {
+      "name": "Paper.even_add",
+      "kind": "theorem",
+      "module": "Paper.Main",
+      "file": "Paper/Main.lean",
+      "range": {
+        "start": {
+          "line": 60,
+          "col": 0
+        },
+        "end": {
+          "line": 65,
+          "col": 0
+        }
+      },
+      "docstring": "Proposition 1",
+      "type_pp": "∀ (a b : ℕ), Even a → Even b → Even (a + b)",
+      "binders": [],
+      "conclusion_pp": "Even (a + b)",
+      "axioms": [
+        "propext",
+        "sorryAx"
+      ],
+      "uses_sorry": true,
+      "nonstandard_axioms": [],
+      "custom_constants": [
+        "Paper.IsNice"
+      ],
+      "source": null
+    },
+    {
+      "name": "Paper.IsNice",
+      "kind": "def",
+      "module": "Paper.Defs",
+      "file": "Paper/Defs.lean",
+      "range": {
+        "start": {
+          "line": 3,
+          "col": 0
+        },
+        "end": {
+          "line": 8,
+          "col": 0
+        }
+      },
+      "docstring": null,
+      "type_pp": "Type → Prop",
+      "binders": [],
+      "conclusion_pp": "Prop",
+      "axioms": [],
+      "uses_sorry": false,
+      "nonstandard_axioms": [],
+      "custom_constants": [],
+      "source": "def IsNice (G : Type) : Prop := True"
+    }
+  ]
+}

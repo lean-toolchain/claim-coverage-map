@@ -1,0 +1,16 @@
+\documentclass{article}
+\usepackage{amsthm,thmtools}
+\declaretheorem[name=Satz,numberwithin=section]{satz}
+\declaretheorem[name=Korollar,sibling=satz]{kor}
+\declaretheorem[name=Bemerkung]{remark}
+\begin{document}
+\section{Eins}
+\begin{satz}\label{s:a} A \end{satz}
+\begin{remark} skip \end{remark}
+\begin{kor} B \end{kor}
+\section{Zwei}
+\begin{satz} C \end{satz}
+\appendix
+\section{Anhang}
+\begin{satz} D \end{satz}
+\end{document}
