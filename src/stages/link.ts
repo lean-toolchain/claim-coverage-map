@@ -14,6 +14,8 @@ export interface LinkOptions {
   decls: DeclsFile;
   hints?: Hints;
   repoDir?: string; // for blueprint and formalization.yaml
+  /** Blind mode: ignore every author declaration (hints, blueprint, formalization.yaml, docstrings). */
+  noAuthorLinks?: boolean;
   k?: number;
 }
 
@@ -106,7 +108,7 @@ export function link(opts: LinkOptions): CandidatesFile {
   const { claims, decls } = opts;
   const k = opts.k ?? 8;
   const ignored = claims.claims.filter((c) => (opts.hints?.ignore ?? []).some((r) => matchesRef(c, r))).map((c) => c.id);
-  const sources: [Link["author_source"], AuthorMap][] = [
+  const sources: [Link["author_source"], AuthorMap][] = opts.noAuthorLinks ? [] : [
     ["hints", fromHints(claims.claims, opts.hints)],
     ["blueprint", fromBlueprint(claims.claims, opts.repoDir)],
     ["formalization-yaml", fromFormalizationYaml(claims.claims, opts.repoDir)],

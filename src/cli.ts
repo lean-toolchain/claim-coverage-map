@@ -124,12 +124,13 @@ async function doLeanExtract(c: Ctx, o: { decls?: string; modules?: string }) {
   await leanExtract({ repoDir: m.repoDir, repoUrl: m.repo, commit: m.commit, workDir: c.workdir, out: existing, modules: o.modules?.split(","), log: c.log });
 }
 
-function doLink(c: Ctx, o: { hints?: string }) {
+function doLink(c: Ctx, o: { hints?: string; authorLinks?: boolean }) {
   const m = c.meta();
   const cands = link({
     claims: readJson(c.p("claims.json"), ClaimsFile), decls: readJson(c.p("decls.json"), DeclsFile),
-    hints: loadHints(o.hints, m.repoDir), repoDir: m.repoDir,
+    hints: loadHints(o.hints, m.repoDir), repoDir: m.repoDir, noAuthorLinks: o.authorLinks === false,
   });
+  if (o.authorLinks === false) c.log("blind mode: author declarations are ignored");
   writeJson(c.p("candidates.json"), cands);
 }
 
@@ -208,7 +209,7 @@ async function doRun(o: RunOpts) {
   await doFetch(c, o);
   await doPaperExtract(c, { ...o, allowEstimatedNumbering: o.allowEstimatedNumbering || o.compile === false });
   await doLeanExtract(c, { decls: o.decls, modules: o.modules ?? loadProjectConfig(c.meta().repoDir)?.modules?.join(",") });
-  doLink(c, { hints: o.hints });
+  doLink(c, { hints: o.hints, authorLinks: o.authorLinks });
   await doJudge(c, o);
   const cov = doReport(c, { noAutoVerified: o.autoVerified === false });
   process.exitCode = failOn(cov, o.failOn);
@@ -218,7 +219,8 @@ const runOptions = (cmd: Command) => llmOpts(
     .option("--commit <sha>", "default: HEAD of the repository (recorded in every output)")
     .addOption(wd()).option("--hints <hints.yaml>").option("--decls <decls.json>", "use a pre-extracted lean-extract output")
     .option("--modules <M1,M2>").option("--allow-estimated-numbering").option("--no-compile", "skip LaTeX compilation (estimated numbering)")
-    .option("--no-auto-verified", "never emit automatic 'verified'").option("--fail-on <statuses>"),
+    .option("--no-auto-verified", "never emit automatic 'verified'").option("--fail-on <statuses>")
+    .option("--no-author-links", "blind mode: ignore author declarations (hints, blueprint, formalization.yaml, docstrings)"),
 );
 
 // `ccm` / `ccm <paper>`: the default command
@@ -241,7 +243,7 @@ program.command("paper-extract").addOption(wd()).option("--hints <file>").option
   .action(async (o) => doPaperExtract(ctx(o.workdir), { ...o, allowEstimatedNumbering: o.allowEstimatedNumbering || o.compile === false }));
 program.command("lean-extract").addOption(wd()).option("--decls <file>").option("--modules <M1,M2>")
   .action(async (o) => doLeanExtract(ctx(o.workdir), o));
-program.command("link").addOption(wd()).option("--hints <file>").action((o) => doLink(ctx(o.workdir), o));
+program.command("link").addOption(wd()).option("--hints <file>").option("--no-author-links").action((o) => doLink(ctx(o.workdir), o));
 llmOpts(program.command("judge").addOption(wd())).action(async (o) => doJudge(ctx(o.workdir), o));
 program.command("report").addOption(wd()).option("--no-auto-verified").option("--fail-on <statuses>")
   .action((o) => { const cov = doReport(ctx(o.workdir), { noAutoVerified: o.autoVerified === false }); process.exitCode = failOn(cov, o.failOn); });

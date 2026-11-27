@@ -36,6 +36,15 @@ inputs:
   no-auto-verified:
     description: Never emit an automatic "verified"
     default: "false"
+  working-directory:
+    description: Directory of the Lean repository to analyze (relative to the workspace)
+    default: "."
+  artifact-name:
+    description: Name of the uploaded coverage artifact (set a unique name per job in a matrix)
+    default: ccm-coverage
+  author-links:
+    description: Use author declarations (ccm.yaml links, blueprint, formalization.yaml, docstrings). "false" = blind mode
+    default: "true"
   github-token:
     description: Token for comments, artifacts and release uploads
     default: ${{ github.token }}
@@ -87,16 +96,16 @@ runs:
       with:
         path: |
           ~/.elan
-          .lake
-          .ccm-work/.cache/llm
-          .ccm-work/lean-ws/.lake
-        key: ccm-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ github.sha }}
+          ${{ inputs.working-directory }}/.lake
+          ${{ inputs.working-directory }}/.ccm-work/.cache/llm
+          ${{ inputs.working-directory }}/.ccm-work/lean-ws/.lake
+        key: ccm-${{ runner.os }}-${{ inputs.artifact-name }}-${{ hashFiles(format('{0}/lean-toolchain', inputs.working-directory), format('{0}/lake-manifest.json', inputs.working-directory)) }}-${{ github.sha }}
         restore-keys: |
-          ccm-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
-          ccm-${{ runner.os }}-
+          ccm-${{ runner.os }}-${{ inputs.artifact-name }}-${{ hashFiles(format('{0}/lean-toolchain', inputs.working-directory), format('{0}/lake-manifest.json', inputs.working-directory)) }}-
 
     - name: Fetch Mathlib cache
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       run: |
         if [ -f lake-manifest.json ] && grep -q '"name": "mathlib"' lake-manifest.json; then
           lake exe cache get || true
@@ -105,6 +114,7 @@ runs:
     - name: Run ccm
       id: run
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       env:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
         OPENAI_API_KEY: ${{ inputs.openai-api-key }}
@@ -116,6 +126,7 @@ runs:
         IN_FAIL_ON: ${{ inputs.fail-on }}
         IN_LATEX: ${{ inputs.latex }}
         IN_NO_AUTO: ${{ inputs.no-auto-verified }}
+        IN_AUTHOR_LINKS: ${{ inputs.author-links }}
       run: |
         args=()
         [ -n "$IN_PAPER" ] && args+=("$IN_PAPER")
@@ -129,6 +140,7 @@ runs:
         [ -n "$IN_VOTES" ] && args+=(--votes "$IN_VOTES")
         [ -n "$IN_FAIL_ON" ] && args+=(--fail-on "$IN_FAIL_ON")
         [ "$IN_NO_AUTO" = "true" ] && args+=(--no-auto-verified)
+        [ "$IN_AUTHOR_LINKS" = "false" ] && args+=(--no-author-links)
         case "$IN_LATEX" in
           none) args+=(--no-compile) ;;
           *) args+=(--allow-estimated-numbering) ;;
@@ -150,20 +162,23 @@ runs:
     - name: Find baseline coverage (base branch)
       if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       continue-on-error: true
       env:
         GH_TOKEN: ${{ inputs.github-token }}
         BASE: ${{ github.base_ref }}
         WORKFLOW: ${{ github.workflow }}
+        ARTIFACT: ${{ inputs.artifact-name }}
       run: |
         id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$WORKFLOW" --branch "$BASE" --status success --limit 1 --json databaseId -q '.[0].databaseId')
         if [ -n "$id" ]; then
-          gh run download "$id" --repo "$GITHUB_REPOSITORY" -n ccm-coverage -D .ccm-work/base
+          gh run download "$id" --repo "$GITHUB_REPOSITORY" -n "$ARTIFACT" -D .ccm-work/base
         fi
 
     - name: Write coverage comment / summary
       if: always() && steps.run.outputs.report != ''
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       env:
         CCM: ${{ github.action_path }}/dist/cli.js
         OFFLINE: ${{ steps.run.outputs.offline }}
@@ -182,18 +197,21 @@ runs:
       if: always() && steps.run.outputs.report != ''
       uses: actions/upload-artifact@v5
       with:
-        name: ccm-coverage
+        name: ${{ inputs.artifact-name }}
         path: |
-          .ccm-work/out/coverage.json
-          .ccm-work/out/report.html
-          .ccm-work/out/appendix.md
-          .ccm-work/out/appendix.tex
-          .ccm-work/out/formalization.yaml
+          ${{ inputs.working-directory }}/.ccm-work/out/coverage.json
+          ${{ inputs.working-directory }}/.ccm-work/out/report.html
+          ${{ inputs.working-directory }}/.ccm-work/out/appendix.md
+          ${{ inputs.working-directory }}/.ccm-work/out/appendix.tex
+          ${{ inputs.working-directory }}/.ccm-work/out/formalization.yaml
+          ${{ inputs.working-directory }}/.ccm-work/claims.json
+          ${{ inputs.working-directory }}/.ccm-work/verdicts.json
         overwrite: true
 
     - name: Comment on pull request
       if: always() && inputs.comment == 'true' && steps.run.outputs.report != '' && github.event.pull_request.number
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       continue-on-error: true
       env:
         GH_TOKEN: ${{ inputs.github-token }}
@@ -210,6 +228,7 @@ runs:
     - name: Attach reports to release
       if: always() && inputs.release-assets == 'true' && github.event_name == 'release' && steps.run.outputs.report != ''
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       env:
         GH_TOKEN: ${{ inputs.github-token }}
         TAG: ${{ github.event.release.tag_name }}

@@ -55,6 +55,9 @@ A copy is in [`../examples/ccm-workflow.yml`](../examples/ccm-workflow.yml).
 | `comment` | `true` | Post/update the PR comment |
 | `release-assets` | `true` | Upload reports on release events |
 | `no-auto-verified` | `false` | Never emit automatic `verified` |
+| `working-directory` | `.` | Directory of the Lean repository (e.g. when it is checked out into a subfolder) |
+| `artifact-name` | `ccm-coverage` | Artifact name; use a unique one per job in a matrix |
+| `author-links` | `true` | `false` = blind mode: ignore author declarations, like an independent reviewer |
 | `github-token` | `github.token` | Token for comments, artifacts, releases |
 
 `claude-code` is a local provider (it needs a logged-in subscription CLI), so in CI the Action switches to `anthropic-api` when a key is provided, even if `ccm.yaml` says `claude-code`.

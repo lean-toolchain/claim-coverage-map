@@ -62,6 +62,7 @@ ccm run [--paper <arXiv ID | dir>] [options]
 | `--allow-estimated-numbering` | Continue with estimated numbers if compilation fails (otherwise exit 3) |
 | `--no-auto-verified` | Never emit an automatic `verified`; such rows become `needs_review` |
 | `--fail-on <statuses>` | Exit 1 if any result has one of these statuses, e.g. `missing,assumed` |
+| `--no-author-links` | Blind mode: ignore author declarations (hints, blueprint, `formalization.yaml`, docstrings) — what an independent reviewer would see |
 
 ### Example
 

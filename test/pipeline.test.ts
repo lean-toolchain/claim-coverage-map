@@ -132,3 +132,12 @@ describe("second judging pass", () => {
     expect(p.get("b")).toEqual(["D1", "D2"]);
   });
 });
+
+describe("blind mode", () => {
+  it("ignores docstring declarations when noAuthorLinks is set", async () => {
+    const claims = await paperExtract({ paperDir: fx("paper"), paperId: "p", compile: "never", allowEstimated: true });
+    const l = link({ claims, decls, noAuthorLinks: true });
+    expect(l.links.every((x) => x.author_declared === null)).toBe(true);
+    expect(l.links.find((x) => x.claim_id === "c-thm-1.1")!.retrieved.map((r) => r.decl)).toContain("Paper.fermat");
+  });
+});
