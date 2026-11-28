@@ -79,5 +79,7 @@ describe("result references", () => {
     expect(matchesRef(c, "Thm. 1.2 (main)")).toBe(true);
     expect(matchesRef(c, "Theorem 1.21")).toBe(false);
     expect(matchesRef(c, "Lemma 1.2")).toBe(false);
+    expect(matchesRef(c, "Some paper title (Theorem 1.2, equation (8))")).toBe(true);
+    expect(matchesRef(c, "Some paper title (Lemma 1.2)")).toBe(false);
   });
 });

@@ -167,9 +167,13 @@ export function matchesRef(c: Claim, ref: string): boolean {
   const r = ref.trim();
   if (r === c.id || (c.label && r === c.label)) return true;
   // "Theorem 1.2", "Thm. 1.2", and descriptive forms like "Theorem 1.2: for subdiagrams ..." / "Theorem 1.2 (Main)"
-  const m = /^([A-Za-z]+)\.?\s*~?([0-9A-Z]+(?:\.[0-9]+)*[a-z]?)(?=$|[\s:,;(.—–-])/.exec(r);
-  if (!m || !c.number) return false;
-  return m[2] === c.number && normalizeKindWord(m[1]!) === c.kind;
+  // also "Paper title (Theorem 1.2, equation (8))" as used in formalization.yaml: first kind word + number anywhere
+  if (!c.number) return false;
+  for (const m of r.matchAll(/(?:^|[\s(\[,;])([A-Za-z]+)\.?\s*~?([0-9A-Z]+(?:\.[0-9]+)*[a-z]?)(?=$|[\s:,;().—–-])/g)) {
+    const k = normalizeKindWord(m[1]!);
+    if (k) return m[2] === c.number && k === c.kind;
+  }
+  return false;
 }
 
 export function normalizeKindWord(w: string): ClaimKind | null {
