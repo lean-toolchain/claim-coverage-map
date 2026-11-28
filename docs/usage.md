@@ -188,7 +188,7 @@ binary = "claude"
 argv = ["your-cli", "--model", "{model}"]
 
 [llm.openai-compatible]        # local or third-party servers
-base_url = "http://localhost:8000/v1"
+base_url = "http://localhost:8000/v1"   # default: $OPENAI_BASE_URL, else https://api.openai.com/v1
 api_key_env = "OPENAI_API_KEY"
 ```
 

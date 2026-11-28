@@ -7,7 +7,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
   readonly capabilities = { nativeStructuredOutput: false, reportsUsage: true };
   constructor(private cfg: ProviderConfig) {}
   async complete<T>(req: CompleteRequest<T>): Promise<CompleteResult<T>> {
-    const base = (this.cfg.base_url ?? "http://localhost:8000/v1").replace(/\/$/, "");
+    const base = (this.cfg.base_url ?? process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1").replace(/\/$/, "");
     const key = process.env[this.cfg.api_key_env ?? "OPENAI_API_KEY"];
     let usage: CompleteResult<T>["usage"];
     let model = req.model, stop = "stop";
