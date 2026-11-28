@@ -24,14 +24,17 @@ partial def parseArgs : List String → Args → Except String Args
   | "--commit" :: v :: r, a => parseArgs r { a with commit := v }
   | x :: _, _ => .error s!"unknown argument {x}"
 
-/-- Root modules of the target: every `.lean` file under the package root that is not in `.lake`. -/
+/-- Root modules of the target: every built `.lean` file under the package root (not in `.lake`). -/
 partial def projectModules (root : System.FilePath) : IO (Array Name) := do
   let mut out := #[]
   for p in ← root.walkDir (fun d => pure (d.fileName != some ".lake" && d.fileName != some ".git")) do
     if p.extension == some "lean" then
       let rel := (p.toString.drop (root.toString.length + 1))
       let fn := p.fileName.getD ""
-      if fn != "lakefile.lean" && !rel.startsWith "." then
+      -- only modules that `lake build` actually built: files outside every lean_lib
+      -- (e.g. task inputs or scratch files) have no .olean and cannot be imported
+      let olean := root / ".lake" / "build" / "lib" / "lean" / ((rel.dropRight 5) ++ ".olean")
+      if fn != "lakefile.lean" && !rel.startsWith "." && (← olean.pathExists) then
         out := out.push (String.toName ((rel.dropRight 5).replace "/" "."))
   return out.qsort (·.toString < ·.toString)
 
