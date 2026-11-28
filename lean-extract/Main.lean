@@ -29,13 +29,15 @@ partial def projectModules (root : System.FilePath) : IO (Array Name) := do
   let mut out := #[]
   for p in ← root.walkDir (fun d => pure (d.fileName != some ".lake" && d.fileName != some ".git")) do
     if p.extension == some "lean" then
-      let rel := (p.toString.drop (root.toString.length + 1))
+      let rel : String := String.mk (p.toString.toList.drop (root.toString.length + 1))
       let fn := p.fileName.getD ""
       -- only modules that `lake build` actually built: files outside every lean_lib
       -- (e.g. task inputs or scratch files) have no .olean and cannot be imported
-      let olean := root / ".lake" / "build" / "lib" / "lean" / ((rel.dropRight 5) ++ ".olean")
+      -- plain List Char operations: String/Slice APIs differ across Lean versions
+      let stem : String := String.mk (rel.toList.take (rel.length - 5))
+      let olean : System.FilePath := root / ".lake" / "build" / "lib" / "lean" / (stem ++ ".olean")
       if fn != "lakefile.lean" && !rel.startsWith "." && (← olean.pathExists) then
-        out := out.push (String.toName ((rel.dropRight 5).replace "/" "."))
+        out := out.push (String.toName (String.mk (stem.toList.map fun c => if c == '/' then '.' else c)))
   return out.qsort (·.toString < ·.toString)
 
 unsafe def main (argv : List String) : IO UInt32 := do
