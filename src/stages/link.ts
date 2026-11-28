@@ -101,7 +101,27 @@ function fromDocstrings(claims: Claim[], decls: DeclsFile): AuthorMap {
 export function declSearchText(d: DeclsFile["decls"][number]): string {
   const nameWords = d.name.split(".").join(" ");
   const idents = (d.type_pp.match(/[A-Za-z_][A-Za-z0-9_.']*/g) ?? []).join(" ");
-  return `${nameWords} ${d.docstring ?? ""} ${idents}`;
+  return `${nameWords} ${d.docstring ?? ""} ${idents} ${mathWords(`${d.name} ${d.type_pp}`)}`;
+}
+
+/**
+ * Shared vocabulary for notation that paper and Lean write differently
+ * (O(·) vs `isBigO`/`=O[·]`, lim vs `Tendsto`, # vs `card`, …), added to both sides of the search.
+ */
+const MATH_WORDS: [RegExp, string][] = [
+  [/(?:^|[^A-Za-z])O\s*\(|=O\[|isBigO|IsBigO|\\ll\b|≪/, "bigo"],
+  [/(?:^|[^A-Za-z])o\s*\(|=o\[|isLittleO|IsLittleO/, "littleo"],
+  [/~|∼|\\sim\b|IsEquivalent|asymptotic/i, "asymequiv"],
+  [/\blim|→\s*∞|\\to\s*\\infty|\bto infinity|Tendsto|atTop/i, "tendsto"],
+  [/#|\\#|cardinal|number of|\bcard\b|\.card|ncard|Nat\.card/i, "card"],
+  [/∑|\\sum\b|tsum|Finset\.sum|\.sum\b/, "sumop"],
+  [/∏|\\prod\b|tprod|Finset\.prod|\.prod\b/, "prodop"],
+  [/density|HasDensity|natDensity/i, "density"],
+  [/irreducib|Irreducible/i, "irreducible"],
+  [/\bprime|Nat\.Prime|\.Prime\b/i, "prime"],
+];
+export function mathWords(s: string): string {
+  return MATH_WORDS.filter(([re]) => re.test(s)).map(([, w]) => w).join(" ");
 }
 
 export function link(opts: LinkOptions): CandidatesFile {
@@ -126,7 +146,7 @@ export function link(opts: LinkOptions): CandidatesFile {
         if (v) { author = v; source = s; break; }
       }
       const retrieved = bm
-        .topK(`${c.title ?? ""} ${c.text_plain}`, k)
+        .topK(`${c.title ?? ""} ${c.text_plain} ${mathWords(`${c.text_tex} ${c.text_plain}`)}`, c.is_main ? Math.max(k, 12) : k)
         .map((h) => ({ decl: pool[h.index]!.name, score: Math.round(h.score * 1000) / 1000 }));
       return { claim_id: c.id, author_declared: author, author_source: source, retrieved };
     });

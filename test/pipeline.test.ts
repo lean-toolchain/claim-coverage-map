@@ -141,3 +141,14 @@ describe("blind mode", () => {
     expect(l.links.find((x) => x.claim_id === "c-thm-1.1")!.retrieved.map((r) => r.decl)).toContain("Paper.fermat");
   });
 });
+
+describe("math vocabulary in search", () => {
+  it("connects O(...) in the paper with isBigO / =O[...] in Lean", async () => {
+    const { mathWords } = await import("../src/stages/link.js");
+    expect(mathWords("D(X) = cX + O(X/\\sqrt{\\log X})")).toContain("bigo");
+    expect(mathWords("(fun x => f x) =O[atTop] g")).toContain("bigo");
+    expect(mathWords("irregularPrimes_isBigO")).toContain("bigo");
+    expect(mathWords("Filter.Tendsto f atTop (nhds c)")).toContain("tendsto");
+    expect(mathWords("plain words only")).toBe("");
+  });
+});
