@@ -71,18 +71,28 @@ function fromBlueprint(claims: Claim[], repoDir?: string): AuthorMap {
   return m;
 }
 
-function fromFormalizationYaml(claims: Claim[], repoDir?: string): AuthorMap {
+function fromFormalizationYaml(claims: Claim[], repoDir?: string, decls?: DeclsFile): AuthorMap {
   const m: AuthorMap = new Map();
   if (!repoDir) return m;
   const p = join(repoDir, "formalization.yaml");
   if (!existsSync(p)) return m;
-  const doc = YAML.parse(readFileSync(p, "utf8")) as { alignment?: { statements?: { source?: string; lean?: string }[] } };
+  const doc = YAML.parse(readFileSync(p, "utf8")) as { alignment?: { statements?: { source?: string; lean?: string; module?: string }[] } };
   for (const s of doc?.alignment?.statements ?? []) {
     if (!s.source || !s.lean) continue;
     const c = refToClaim(claims, s.source);
-    if (c) m.set(c.id, [...new Set([...(m.get(c.id) ?? []), s.lean])].sort());
+    const name = resolveDeclName(decls, s.lean, s.module);
+    if (c) m.set(c.id, [...new Set([...(m.get(c.id) ?? []), name])].sort());
   }
   return m;
+}
+
+/** Map an author-given name to ours: same-named declarations from different modules are `name@Module`. */
+export function resolveDeclName(decls: DeclsFile | undefined, name: string, module?: string): string {
+  const names = new Set(decls?.decls.map((d) => d.name) ?? []);
+  if (names.has(name)) return name;
+  if (module && names.has(`${name}@${module}`)) return `${name}@${module}`;
+  const q = [...names].filter((n) => n.startsWith(`${name}@`));
+  return q.length === 1 ? q[0]! : name;
 }
 
 function fromDocstrings(claims: Claim[], decls: DeclsFile): AuthorMap {
@@ -131,7 +141,7 @@ export function link(opts: LinkOptions): CandidatesFile {
   const sources: [Link["author_source"], AuthorMap][] = opts.noAuthorLinks ? [] : [
     ["hints", fromHints(claims.claims, opts.hints)],
     ["blueprint", fromBlueprint(claims.claims, opts.repoDir)],
-    ["formalization-yaml", fromFormalizationYaml(claims.claims, opts.repoDir)],
+    ["formalization-yaml", fromFormalizationYaml(claims.claims, opts.repoDir, decls)],
     ["docstring", fromDocstrings(claims.claims, decls)],
   ];
   const pool = decls.decls.filter((d) => d.kind === "theorem");

@@ -159,7 +159,7 @@ export function toFormalizationYaml(cov: CoverageFile, decls: DeclsFile, existin
   const statements = cov.claims
     .filter((c) => c.status !== "missing")
     .flatMap((c) => c.decls.map((n) => ({
-      source: claimDisplay(c), lean: n, module: byName.get(n)?.module ?? "",
+      source: claimDisplay(c), lean: n.replace(/@.*$/, ""), module: byName.get(n)?.module ?? "",
       status: palomarStatus(c),
     })));
   const doc = existing ? YAML.parseDocument(existing) : new YAML.Document({});

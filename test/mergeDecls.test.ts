@@ -17,4 +17,11 @@ describe("mergeDecls (problem/solution modules)", () => {
     ]);
     expect(mergeDecls([solution, problem]).decls.find((x) => x.name === "main")!.uses_sorry).toBe(false);
   });
+
+  it("keeps different proved statements that share a name, qualified by module", () => {
+    const h2 = { ...base, decls: [{ ...d("main", "H2.solution", false), type_pp: "A" }] };
+    const lem = { ...base, decls: [{ ...d("main", "Lem41.solution", false), type_pp: "B" }, { ...d("main", "Lem41.problem", true), type_pp: "B" }] };
+    const same = { ...base, decls: [{ ...d("main", "H2.copy", false), type_pp: "A" }] };
+    expect(mergeDecls([h2, lem, same]).decls.map((x) => x.name).sort()).toEqual(["main@H2.solution", "main@Lem41.solution"]);
+  });
 });

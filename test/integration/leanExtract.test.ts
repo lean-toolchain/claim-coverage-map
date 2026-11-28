@@ -15,7 +15,10 @@ describe.skipIf(!hasLake)("lean-extract on a fixture repository", () => {
     cpSync(join(import.meta.dirname, "..", "fixtures", "lean-repo"), repo, { recursive: true });
     const d = await leanExtract({ repoDir: repo, repoUrl: "https://github.com/o/r", commit: "c0ffee", workDir: w, out: join(w, "decls.json") });
     const by = new Map(d.decls.map((x) => [x.name, x]));
-    expect(d.decls.filter((x) => x.kind === "theorem").map((x) => x.name)).toEqual(["Paper.add_zero'", "Paper.uses_sorry", "Paper.uses_axiom", "Paper.nice_zero"]);
+    expect(d.decls.filter((x) => x.kind === "theorem").map((x) => x.name)).toEqual(["Paper.solution_thm", "Paper.add_zero'", "Paper.uses_sorry", "Paper.uses_axiom", "Paper.nice_zero"]);
+    // modules outside defaultTargets are built and extracted; unbuildable ones are skipped
+    expect(by.get("Paper.solution_thm")!.file).toBe("Extra/Solution.lean");
+    expect(by.has("junk")).toBe(false);
     // definitions and axioms are extracted too, so the judge can read what custom constants mean
     expect(by.get("Paper.IsNice")).toMatchObject({ kind: "def", type_pp: "Nat → Prop" });
     expect(by.get("Paper.IsNice")!.source).toContain("def IsNice");
